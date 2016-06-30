@@ -27,7 +27,7 @@ func main() {
 
 	server := httprouter.New()
 
-	// Needs '/u' even /:id is a path sepereated param
+	// Needs '/u' even /:id is a path separated param
 	server.GET("/s/u/:id", s.GetRedirectHandler())
 	server.GET("/s/info/:id", s.GetInfoHandler())
 	server.POST("/s/register", s.GetSaveHandler())
