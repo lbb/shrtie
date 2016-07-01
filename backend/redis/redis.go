@@ -63,25 +63,21 @@ func (r Redis) Save(value string, ttl time.Duration) string {
 	// Convert to base64, wich is URL save and without padding ('='*)
 	key := base64.RawStdEncoding.EncodeToString(buf[:size])
 
-	// PATH is the prefix and key (exmpl. prefix/Ab2g )
-	// the PATH will be expanded with metadata of the key e.g prefix/Ab2g:count
-	// All key are stored seperatly, because golangs encodign is rather slow
-	// In theory there aren't many Info(...) requests, so this method should be faster
-	// This also makes the PATH:counter faster, rather that Unmarshal/Marshal
-	path := r.prefix + key
+	// Take timestamp
+	now := time.Now()
 
-	// Give error handling to redis Pipelined function
-	_, err = r.conn.Pipelined(func(pipe *redis.Pipeline) error {
-		now := time.Now()
-		pipe.HSet(path, metaUrl, value)
-		pipe.HSet(path, metaCreated, strconv.FormatInt(now.Unix(), 10))
-		if ttl == 0 {
-			pipe.HSet(path, metaUntil, "0")
-			return nil
-		}
-		pipe.HSet(path, metaUntil, strconv.FormatInt(now.Add(ttl).Unix(), 10))
-		return nil
-	})
+	var until string
+	if ttl == 0 {
+		until = "0"
+	} else {
+		until = strconv.FormatInt(now.Add(ttl).Unix(), 10)
+	}
+
+	err = r.conn.HMSet(r.prefix+key, map[string]string{
+		metaUrl:     value,
+		metaCreated: strconv.FormatInt(now.Unix(), 10),
+		metaUntil:   until,
+	}).Err()
 
 	if err != nil {
 		return ""
