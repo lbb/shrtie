@@ -5,15 +5,24 @@ import (
 	"encoding/binary"
 	"errors"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/realfake/shrtie"
 	redis "gopkg.in/redis.v4"
 )
 
-const metaUntil string = ":until"
-const metaCount string = ":count"
-const metaCreated string = ":created"
+const (
+	metaUntil   string = "until"
+	metaCount          = "count"
+	metaCreated        = "created"
+	metaUrl            = "url"
+)
+
+var (
+	ErrWrongKey error = errors.New("Wrong key")
+	ErrTTL      error = errors.New("TTL exceeded!")
+)
 
 type Redis struct {
 	conn   *redis.Client
@@ -59,13 +68,13 @@ func (r Redis) Save(value string, ttl time.Duration) string {
 	// Give error handling to redis Pipelined function
 	_, err = r.conn.Pipelined(func(pipe *redis.Pipeline) error {
 		now := time.Now()
-		pipe.Set(path, value, 0)
-		pipe.Set(path+metaCreated, now.Unix(), 0)
+		pipe.HSet(path, metaUrl, value)
+		pipe.HSet(path, metaCreated, strconv.FormatInt(now.Unix(), 10))
 		if ttl == 0 {
-			pipe.Set(path+metaUntil, 0, 0)
+			pipe.HSet(path, metaUntil, "0")
 			return nil
 		}
-		pipe.Set(path+metaUntil, now.Add(ttl).Unix(), 0)
+		pipe.HSet(path, metaUntil, strconv.FormatInt(now.Add(ttl).Unix(), 10))
 		return nil
 	})
 
@@ -80,17 +89,17 @@ func (r Redis) Get(key string) (string, error) {
 	// Check if string is not base64, so user cant access meta data
 	// Redis is string-escape save
 	if escape.MatchString(key) {
-		return "", errors.New("Wrong key")
+		return "", ErrWrongKey
 	}
 
 	// Prepare redis pipeline results
+	path := r.prefix + key
 	var url *redis.StringCmd
 	var until *redis.StringCmd
 	_, err := r.conn.Pipelined(func(pipe *redis.Pipeline) error {
-		path := r.prefix + key
-		url = pipe.Get(path)
-		until = pipe.Get(path + metaUntil)
-		pipe.Incr(path + metaCount)
+		url = pipe.HGet(path, metaUrl)
+		until = pipe.HGet(path, metaUntil)
+		pipe.HIncrBy(path, metaCount, 1)
 		return nil
 	})
 
@@ -100,45 +109,52 @@ func (r Redis) Get(key string) (string, error) {
 
 	// Check if the key is expired
 	if ttlTo, _ := until.Int64(); ttlTo != 0 && time.Now().Unix() > ttlTo {
-		return "", errors.New("TTL exceeded")
+		return "", ErrTTL
 	}
 
 	return url.Val(), nil
 }
 
 func (r Redis) Info(key string) (*shrtie.Metadata, error) {
-	// Prepare redis pipeline results
-	var url *redis.StringCmd
-	var untilRaw *redis.StringCmd
-	var clickedRaw *redis.StringCmd
-	var createdRaw *redis.StringCmd
-	_, err := r.conn.Pipelined(func(pipe *redis.Pipeline) error {
-		path := r.prefix + key
-		url = pipe.Get(path)
-		untilRaw = pipe.Get(path + metaUntil)
-		clickedRaw = pipe.Get(path + metaCount)
-		createdRaw = pipe.Get(path + metaCreated)
-		return nil
-	})
+	// path var was used for clearity, can also be omitted
+	path := r.prefix + key
+
+	// Get all entrys for this hashtable
+	objMap, err := r.conn.HGetAll(path).Result()
 
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert to underlaying values
-	// Errors are ignored because the values should be type safe
-	until, _ := untilRaw.Int64()
-	clicked, _ := clickedRaw.Int64()
-	created, _ := createdRaw.Int64()
-
-	// Check if entry TTL is exceeded
-	if ttl := until - time.Now().Unix(); ttl < 0 {
-		return &shrtie.Metadata{
-			Url:     url.Val(),
-			TTL:     ttl,
-			Clicked: clicked,
-			Created: time.Unix(created, 0),
-		}, nil
+	if len(objMap) == 0 {
+		return nil, ErrWrongKey
 	}
-	return nil, errors.New("TTL exceeded")
+
+	// Convert to underlaying values
+	// Internally redis.v4 also uses strconv
+	// Errors are ignored because the values should be safe
+	// Check if entry TTL is exceeded
+	var ttl int64
+	var now = time.Now().Unix()
+	if until, _ := strconv.ParseInt(objMap[metaUntil], 10, 64); until-now > 0 {
+		ttl = until - now
+	} else if until == 0 {
+		ttl = 0
+	} else {
+		return nil, ErrTTL
+	}
+
+	//Convert these values afterwards to save process time if ttl is exceeded
+	created, _ := strconv.ParseInt(objMap[metaCreated], 10, 64)
+
+	// This can return an error if it wasnt clicked before but
+	// doesn't matter because it still returns 0
+	clicked, _ := strconv.ParseInt(objMap[metaCount], 10, 64)
+
+	return &shrtie.Metadata{
+		Url:     objMap[metaUrl],
+		TTL:     ttl,
+		Clicked: clicked,
+		Created: time.Unix(created, 0),
+	}, nil
 }

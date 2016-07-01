@@ -23,12 +23,14 @@ func main() {
 	}
 
 	s := shrtie.New(b)
-
 	server := httprouter.New()
 
-	// Needs '/u' even /:id is a path separated param
-	server.GET("/s/u/:id", s.GetRedirectHandler())
-	server.GET("/s/info/:id", s.GetInfoHandler())
-	server.POST("/s/register", s.GetSaveHandler())
+	server.GET("/s/:id", s.GetRedirectHandler())
+	server.POST("/s", s.GetSaveHandler())
+
+	// Can't be "/s/info/:id"
+	server.GET("/info/:id", s.GetInfoHandler())
+
+	// Start server
 	log.Print(http.ListenAndServe(":9999", server))
 }

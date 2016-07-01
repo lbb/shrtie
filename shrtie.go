@@ -2,7 +2,6 @@ package shrtie
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -122,16 +121,25 @@ func (s shrtie) GetSaveHandler() httprouter.Handle {
 }
 
 func concatURL(r *http.Request, key string) string {
+	absUrl := r.URL
 	if !r.URL.IsAbs() {
-		// Not relative to response path
-		// TODO: remove ?
 		if r.TLS == nil {
-			return fmt.Sprintf("http://%s/%s", r.Host, key)
+			absUrl, _ = url.Parse("http://" + r.Host + r.URL.String())
+		} else {
+			absUrl, _ = url.Parse("https://" + r.Host + r.URL.String())
 		}
-		return fmt.Sprintf("https://%s/%s", r.Host, key)
 	}
+
+	// Add tailing slash to extend path properly
+	// host/path/ => host/path/abc instead of
+	// host/path => host/abc
+	// If user has set url fragment or url query this will fail!
+	// User is not supposed to do this
+	// absUrl.Fragment = ""
+	// absUrl.RawQuery = ""
+	absUrl.Path = absUrl.Path + "/"
 
 	// No further checks function is only called by programm
 	realativeUrl, _ := url.Parse(key)
-	return r.URL.ResolveReference(realativeUrl).String()
+	return absUrl.ResolveReference(realativeUrl).String()
 }

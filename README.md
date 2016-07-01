@@ -4,7 +4,12 @@
 This projects aims to provide a small and flexible url shortner
 
 ## Features
-**Flexible:** Supports several routers such as `gorilla/mux`, `julienschmidt/httprouter` and the default `http` server.
+**Flexible:** Supports several routers such as `gorilla/mux`, `julienschmidt/httprouter` and the default `http.ServeMux` server.
+
+## How to get it ?
+```bash
+go get github.com/realfake/shrtie
+```
 
 ## How to use it ?
 Have a look in the examples folder.
