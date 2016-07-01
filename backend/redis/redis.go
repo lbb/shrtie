@@ -19,6 +19,8 @@ const (
 	metaUrl            = "url"
 )
 
+const maxLength = 2048
+
 var (
 	ErrWrongKey error = errors.New("Wrong key")
 	ErrTTL      error = errors.New("TTL exceeded!")
@@ -45,6 +47,9 @@ func New(options *redis.Options) (shrtie.GetSaver, error) {
 }
 
 func (r Redis) Save(value string, ttl time.Duration) string {
+	if len(value) > maxLength {
+		return ""
+	}
 	// Get atomic identifier from the counter
 	index, err := r.conn.Incr(r.prefix + "meta:count").Result()
 	if err != nil {
