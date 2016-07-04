@@ -25,12 +25,14 @@ func main() {
 	s := shrtie.New(b)
 	server := httprouter.New()
 
-	server.GET("/s/:id", s.GetRedirectHandler())
-	server.POST("/s", s.GetSaveHandler())
+	// Get RedirectHandler and warp it
+	// into a julienschmidt/httprouter compatible handler function
+	server.GET("/s/:id", s.RedirectHandler().Httprouter())
+	server.POST("/s", s.SaveHandler().Httprouter())
 
-	// Can't be "/s/info/:id"
-	server.GET("/info/:id", s.GetInfoHandler())
+	server.GET("/info/:id", s.InfoHandler().Httprouter())
 
 	// Start server
 	log.Print(http.ListenAndServe(":9999", server))
+
 }

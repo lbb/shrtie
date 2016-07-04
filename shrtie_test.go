@@ -3,14 +3,13 @@ package shrtie
 import (
 	"encoding/json"
 	"errors"
+	"golang.org/x/net/context"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 type testBackend struct{}
@@ -44,7 +43,7 @@ func TestRedirecter(t *testing.T) {
 
 	// Setup
 	shrt := New(tb)
-	redirectHandler := shrt.GetRedirectHandler()
+	redirectHandler := shrt.RedirectHandler()
 
 	// Not able to chain test here !?
 
@@ -61,8 +60,9 @@ func TestRedirecter(t *testing.T) {
 
 	req.Header.Add("Content-Type", "application/json")
 	res := httptest.NewRecorder()
-	params := httprouter.Params([]httprouter.Param{{Key: "id", Value: "abc"}})
-	redirectHandler(res, req, params)
+	background := context.Background()
+	ctx := context.WithValue(background, "id", "abc")
+	redirectHandler.f(res, req, ctx)
 
 	if res.Code != http.StatusMovedPermanently {
 		t.Error("Wrong Status Value")
@@ -85,8 +85,8 @@ func TestRedirecter(t *testing.T) {
 
 	req.Header.Add("Content-Type", "application/json")
 	res = httptest.NewRecorder()
-	params = httprouter.Params([]httprouter.Param{{Key: "id", Value: "aaa"}})
-	redirectHandler(res, req, params)
+	ctx = context.WithValue(background, "id", "aaa")
+	redirectHandler.f(res, req, ctx)
 
 	if loc := res.Header().Get("Location"); loc == "https://here.com" {
 		t.Error("Wrong redirect location in failing test:", loc)
@@ -105,8 +105,8 @@ func TestRedirecter(t *testing.T) {
 
 	req.Header.Add("Content-Type", "application/pdf")
 	res = httptest.NewRecorder()
-	params = httprouter.Params([]httprouter.Param{{Key: "id", Value: "abc"}})
-	redirectHandler(res, req, params)
+	ctx = context.WithValue(background, "id", "abc")
+	redirectHandler.f(res, req, ctx)
 
 	if loc := res.Header().Get("Location"); loc != "https://here.com" {
 		t.Error("Wrong redirect location in failing test:", loc)
@@ -117,7 +117,7 @@ func TestRedirecter(t *testing.T) {
 func TestSave(t *testing.T) {
 	// Setup
 	shrt := New(tb)
-	redirectHandler := shrt.GetSaveHandler()
+	redirectHandler := shrt.SaveHandler()
 
 	// Not able to chain test here !?
 
@@ -140,8 +140,8 @@ func TestSave(t *testing.T) {
 
 	req.Header.Add("Content-Type", "application/json")
 	res := httptest.NewRecorder()
-	params := httprouter.Params([]httprouter.Param{})
-	redirectHandler(res, req, params)
+	background := context.Background()
+	redirectHandler.f(res, req, background)
 
 	if res.Code != http.StatusOK {
 		t.Error("Wrong Status Value", res.Code)
@@ -160,7 +160,7 @@ func TestSave(t *testing.T) {
 func TestInfo(t *testing.T) {
 	// Setup
 	shrt := New(tb)
-	infoHandler := shrt.GetInfoHandler()
+	infoHandler := shrt.InfoHandler()
 
 	// Not able to chain test here !?
 
@@ -181,9 +181,10 @@ func TestInfo(t *testing.T) {
 		t.Error("Failed in info test:", err)
 	}
 
+	background := context.Background()
+	ctx := context.WithValue(background, "id", "abc")
 	res := httptest.NewRecorder()
-	params := httprouter.Params([]httprouter.Param{{"id", "abc"}})
-	infoHandler(res, req, params)
+	infoHandler.f(res, req, ctx)
 
 	if res.Code != http.StatusOK {
 		t.Error("Wrong Status Value", res.Code)
