@@ -1,20 +1,3 @@
-# shrtie [![Build Status](https://travis-ci.org/realfake/shrtie.svg?branch=master)](https://travis-ci.org/realfake/shrtie) [![GoDoc](https://godoc.org/github.com/realfake/shrtie?status.svg)](https://godoc.org/github.com/realfake/shrtie)
-
-## What is this ?
-This projects aims to provide a small and flexible url shortner
-
-## Features
-**Flexible:** Supports several routers such as `gorilla/mux`, `julienschmidt/httprouter` and the default `http.ServeMux` server.
-
-## How to get it ?
-```bash
-go get github.com/realfake/shrtie
-```
-
-## How to use it ?
-Have a look in the `examples/` folder.
-
-```go
 package main
 
 import (
@@ -53,4 +36,3 @@ func main() {
 	log.Print(http.ListenAndServe(":9999", server))
 
 }
-```
