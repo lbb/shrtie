@@ -29,13 +29,13 @@ type Metadata struct {
 	Created time.Time `json:"created"`
 }
 
-type entry struct {
+type Entry struct {
 	Url     string    `json:"url"`               // The URL to shorten
 	TTL     int64     `json:"ttl,omitempty"`     // Time in seconds to life. Overwrites Expires
 	Expires time.Time `json:"expires,omitempty"` // Sets the expiration date. Format is specified in RFC 3339
 }
 
-type ack struct {
+type Ack struct {
 	Url string `json:"url"` // The shortened URL
 }
 
@@ -44,6 +44,7 @@ type shrtie struct {
 }
 
 type Handler struct {
+	// Function handels request. Context contains the request id under the key "id" as string.
 	f func(http.ResponseWriter, *http.Request, context.Context)
 }
 
@@ -123,8 +124,8 @@ func (s shrtie) InfoHandler() Handler {
 func (s shrtie) SaveHandler() Handler {
 	return Handler{
 		f: func(w http.ResponseWriter, r *http.Request, _ context.Context) {
-			var request = entry{}
-			var response = ack{}
+			var request = Entry{}
+			var response = Ack{}
 			var ttl time.Duration
 
 			// Check header (can be omitted)

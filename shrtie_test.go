@@ -147,7 +147,7 @@ func TestSave(t *testing.T) {
 		t.Error("Wrong Status Value", res.Code)
 	}
 
-	var resJSON = ack{}
+	var resJSON = Ack{}
 	if err = json.Unmarshal(res.Body.Bytes(), &resJSON); err != nil {
 		t.Error(err)
 	}
