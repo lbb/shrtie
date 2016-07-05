@@ -16,14 +16,14 @@ const (
 	metaUntil   string = "until"
 	metaCount          = "count"
 	metaCreated        = "created"
-	metaUrl            = "url"
+	metaURL            = "url"
 )
 
 const maxLength = 2048
 
 var (
 	ErrWrongKey error = errors.New("Wrong key")
-	ErrTTL      error = errors.New("TTL exceeded!")
+	ErrTTL            = errors.New("TTL exceeded")
 )
 
 type Redis struct {
@@ -74,7 +74,7 @@ func (r Redis) Save(value string, ttl time.Duration) string {
 	}
 
 	err = r.conn.HMSet(r.prefix+key, map[string]string{
-		metaUrl:     value,
+		metaURL:     value,
 		metaCreated: strconv.FormatInt(now.Unix(), 10),
 		metaUntil:   until,
 	}).Err()
@@ -98,7 +98,7 @@ func (r Redis) Get(key string) (string, error) {
 	var url *redis.StringCmd
 	var until *redis.StringCmd
 	_, err := r.conn.Pipelined(func(pipe *redis.Pipeline) error {
-		url = pipe.HGet(path, metaUrl)
+		url = pipe.HGet(path, metaURL)
 		until = pipe.HGet(path, metaUntil)
 		pipe.HIncrBy(path, metaCount, 1)
 		return nil
@@ -153,7 +153,7 @@ func (r Redis) Info(key string) (*shrtie.Metadata, error) {
 	clicked, _ := strconv.ParseInt(objMap[metaCount], 10, 64)
 
 	return &shrtie.Metadata{
-		Url:     objMap[metaUrl],
+		URL:     objMap[metaURL],
 		TTL:     ttl,
 		Clicked: clicked,
 		Created: time.Unix(created, 0),
