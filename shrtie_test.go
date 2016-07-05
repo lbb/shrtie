@@ -3,13 +3,16 @@ package shrtie
 import (
 	"encoding/json"
 	"errors"
-	"golang.org/x/net/context"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/julienschmidt/httprouter"
+	"golang.org/x/net/context"
 )
 
 type testBackend struct{}
@@ -197,5 +200,56 @@ func TestInfo(t *testing.T) {
 
 	if !reflect.DeepEqual(resJSON, meta) {
 		t.Errorf("Failed in info response test: Got %##v\n expected %##v\n", resJSON, meta)
+	}
+}
+
+func TestMuxHandler(t *testing.T) {
+	shrt := New(tb)
+	router := mux.NewRouter()
+	router.Handle("/short/{id}", shrt.RedirectHandler().Mux()).Methods("GET")
+	res := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "http://example.com/short/abc", nil)
+
+	if err != nil {
+		t.Error("Failed in gorilla mux handlertest: ", err)
+	}
+
+	router.ServeHTTP(res, req)
+	if loc := res.Header().Get("Location"); loc != "https://here.com" {
+		t.Error("Wrong redirect location in mux handler test:", loc)
+	}
+}
+
+func TestHttprouterHandler(t *testing.T) {
+	shrt := New(tb)
+	router := httprouter.New()
+	router.GET("/short/:id", shrt.RedirectHandler().Httprouter())
+	res := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "http://example.com/short/abc", nil)
+
+	if err != nil {
+		t.Error("Failed in gorilla mux handlertest: ", err)
+	}
+
+	router.ServeHTTP(res, req)
+	if loc := res.Header().Get("Location"); loc != "https://here.com" {
+		t.Error("Wrong redirect location in mux handler test:", loc)
+	}
+}
+
+func TestHttpMuxHandler(t *testing.T) {
+	shrt := New(tb)
+	router := http.NewServeMux()
+	router.HandleFunc("/short/", shrt.RedirectHandler().ServerMux())
+	res := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "http://example.com/short/abc", nil)
+
+	if err != nil {
+		t.Error("Failed in gorilla mux handlertest: ", err)
+	}
+
+	router.ServeHTTP(res, req)
+	if loc := res.Header().Get("Location"); loc != "https://here.com" {
+		t.Error("Wrong redirect location in mux handler test:", loc)
 	}
 }

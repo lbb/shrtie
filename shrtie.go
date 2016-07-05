@@ -23,10 +23,10 @@ type GetSaver interface {
 }
 
 type Metadata struct {
-	URL     string    `json:"url"`
-	TTL     int64     `json:"ttl,omitempty"`
-	Clicked int64     `json:"click_count"`
-	Created time.Time `json:"created"`
+	URL     string    `json:"url"`           // The shortened URL
+	TTL     int64     `json:"ttl,omitempty"` // Time to life in seconds
+	Clicked int64     `json:"click_count"`   // Click count
+	Created time.Time `json:"created"`       // Created time the format is specified in RFC 3339
 }
 
 type Entry struct {
