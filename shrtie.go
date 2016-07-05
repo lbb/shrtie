@@ -23,23 +23,23 @@ type GetSaver interface {
 }
 
 type Metadata struct {
-	Url     string    `json:"url"`
+	URL     string    `json:"url"`
 	TTL     int64     `json:"ttl,omitempty"`
 	Clicked int64     `json:"click_count"`
 	Created time.Time `json:"created"`
 }
 
 type Entry struct {
-	Url     string    `json:"url"`               // The URL to shorten
+	URL     string    `json:"url"`               // The URL to shorten
 	TTL     int64     `json:"ttl,omitempty"`     // Time in seconds to life. Overwrites Expires
 	Expires time.Time `json:"expires,omitempty"` // Sets the expiration date. Format is specified in RFC 3339
 }
 
 type Ack struct {
-	Url string `json:"url"` // The shortened URL
+	URL string `json:"url"` // The shortened URL
 }
 
-type shrtie struct {
+type Shrtie struct {
 	backend GetSaver
 }
 
@@ -73,13 +73,13 @@ func (h Handler) ServerMux() http.HandlerFunc {
 	}
 }
 
-func New(backend GetSaver) shrtie {
-	return shrtie{
+func New(backend GetSaver) Shrtie {
+	return Shrtie{
 		backend: backend,
 	}
 }
 
-func (s shrtie) RedirectHandler() Handler {
+func (s Shrtie) RedirectHandler() Handler {
 	return Handler{
 		f: func(w http.ResponseWriter, r *http.Request, ctx context.Context) {
 			// Get julienschmidt/httprouter path parameter
@@ -96,7 +96,7 @@ func (s shrtie) RedirectHandler() Handler {
 	}
 }
 
-func (s shrtie) InfoHandler() Handler {
+func (s Shrtie) InfoHandler() Handler {
 	// Check if backend implements Infoer interface
 	if backendInfo, ok := s.backend.(Infoer); ok {
 		return Handler{
@@ -121,7 +121,7 @@ func (s shrtie) InfoHandler() Handler {
 	return Handler{}
 }
 
-func (s shrtie) SaveHandler() Handler {
+func (s Shrtie) SaveHandler() Handler {
 	return Handler{
 		f: func(w http.ResponseWriter, r *http.Request, _ context.Context) {
 			var request = Entry{}
@@ -150,8 +150,8 @@ func (s shrtie) SaveHandler() Handler {
 				ttl = time.Second * 0
 			}
 
-			key := s.backend.Save(request.Url, ttl)
-			response.Url = concatURL(r, key)
+			key := s.backend.Save(request.URL, ttl)
+			response.URL = concatURL(r, key)
 			w.Header().Add("Content-Type", "application-json")
 			json.NewEncoder(w).Encode(response)
 			return
@@ -160,12 +160,12 @@ func (s shrtie) SaveHandler() Handler {
 }
 
 func concatURL(r *http.Request, key string) string {
-	absUrl := r.URL
+	absURL := r.URL
 	if !r.URL.IsAbs() {
 		if r.TLS == nil {
-			absUrl, _ = url.Parse("http://" + r.Host + r.URL.String())
+			absURL, _ = url.Parse("http://" + r.Host + r.URL.String())
 		} else {
-			absUrl, _ = url.Parse("https://" + r.Host + r.URL.String())
+			absURL, _ = url.Parse("https://" + r.Host + r.URL.String())
 		}
 	}
 
@@ -176,9 +176,9 @@ func concatURL(r *http.Request, key string) string {
 	// User is not supposed to do this
 	// absUrl.Fragment = ""
 	// absUrl.RawQuery = ""
-	absUrl.Path = absUrl.Path + "/"
+	absURL.Path = absURL.Path + "/"
 
 	// No further checks function is only called by programm
-	realativeUrl, _ := url.Parse(key)
-	return absUrl.ResolveReference(realativeUrl).String()
+	realativeURL, _ := url.Parse(key)
+	return absURL.ResolveReference(realativeURL).String()
 }

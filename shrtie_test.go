@@ -31,7 +31,7 @@ func (testBackend) Info(s string) (*Metadata, error) {
 }
 
 var meta = Metadata{
-	Url:     "https://here.com",
+	URL:     "https://here.com",
 	TTL:     100,
 	Clicked: 1,
 	Created: time.Date(2000, time.January, 1, 1, 1, 1, 1, time.UTC),
@@ -151,8 +151,8 @@ func TestSave(t *testing.T) {
 	if err = json.Unmarshal(res.Body.Bytes(), &resJSON); err != nil {
 		t.Error(err)
 	}
-	if resJSON.Url != "http://example.com/abc" {
-		t.Error("Wrong short link in save test: ", resJSON.Url)
+	if resJSON.URL != "http://example.com/abc" {
+		t.Error("Wrong short link in save test: ", resJSON.URL)
 	}
 
 }
