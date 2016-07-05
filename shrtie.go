@@ -117,7 +117,7 @@ func (s Shrtie) InfoHandler() Handler {
 	}
 
 	// Exit programm if backend doesn't support Infoer interface
-	log.Fatalln("Backend doesn't support Infoer interface")
+	log.Panicln("Backend doesn't support Infoer interface")
 	return Handler{}
 }
 
